@@ -3,16 +3,28 @@ import spaces
 import gradio as gr
 import imageio
 import torch
+from torchvision.datasets.utils import download_and_extract_archive
 from PIL import Image
 from omegaconf import OmegaConf
 from algorithms.dfot import DFoTVideoPose
 from utils.ckpt_utils import download_pretrained
+from utils.huggingface_utils import download_from_hf
 from datasets.video.utils.io import read_video
 from datasets.video import RealEstate10KAdvancedVideoDataset
 from export import export_to_video
 
+DATASET_URL = "https://huggingface.co/kiwhansong/DFoT/resolve/main/datasets/RealEstate10K_Tiny.tar.gz"
 DATASET_DIR = Path("data/real-estate-10k-tiny")
 LONG_LENGTH = 20 # seconds
+
+if not DATASET_DIR.exists():
+    DATASET_DIR.mkdir(parents=True)
+    download_and_extract_archive(
+        DATASET_URL,
+        DATASET_DIR.parent,
+        remove_finished=True,
+    )
+
 
 metadata = torch.load(DATASET_DIR / "metadata" / "test.pt", weights_only=False)
 video_list = [
