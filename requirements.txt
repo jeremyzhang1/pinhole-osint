@@ -1,0 +1,3 @@
+# gradio
+# spaces
+git+https://github.com/kwsong0113/dfot-test.git@release#egg=dfot # FIXME: change to the official repo
