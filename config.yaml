@@ -121,7 +121,7 @@ tasks:
       name: vanilla
       guidance_scale: 1
       visualize: False
-    max_batch_size: null
+    max_batch_size: 4
 logging:
   deterministic: null
   loss_freq: 100
