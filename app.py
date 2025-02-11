@@ -439,7 +439,7 @@ with gr.Blocks(theme=gr.themes.Base(primary_hue="teal")) as demo:
 
     gr.Markdown("# Diffusion Forcing Transformer with History Guidance")
     gr.Markdown(
-        "### Official Interactive Demo for [_History-guided Video Diffusion_](todo)"
+        "### Official Interactive Demo for [_History-guided Video Diffusion_](https://arxiv.org/abs/2502.06764)"
     )
     with gr.Row():
         gr.Button(
