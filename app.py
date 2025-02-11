@@ -163,6 +163,7 @@ class CustomProgressBar:
         return getattr(self.pbar, attr)
 
 
+@spaces.GPU()
 @torch.autocast("cuda")
 @torch.no_grad()
 def navigate_video(
@@ -570,7 +571,7 @@ with gr.Blocks(theme=gr.themes.Base(primary_hue="teal")) as demo:
         gr.Markdown(
             f"""
             ## Demo 2: Single Image → Long {LONG_LENGTH}-second Video
-            > #### _Diffusion Forcing Transformer, with History Guidance, generates long videos via sliding window rollouts and temporal super-resolution._
+            > #### _Diffusion Forcing Transformer, with History Guidance, can generate long videos via sliding window rollouts and temporal super-resolution._
         """
         )
 
