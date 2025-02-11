@@ -119,9 +119,9 @@ tasks:
     enabled: false
     history_guidance:
       name: vanilla
-      guidance_scale: 1.5
+      guidance_scale: 1
       visualize: False
-    max_batch_size: 1
+    max_batch_size: null
 logging:
   deterministic: null
   loss_freq: 100
