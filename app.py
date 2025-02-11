@@ -116,6 +116,7 @@ def single_image_to_long_video(
     return export_to_video(gen_video[0].detach().cpu(), fps=fps)
 
 
+@spaces.GPU()
 @torch.autocast("cuda")
 @torch.no_grad()
 def any_images_to_short_video(
