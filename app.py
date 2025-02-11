@@ -94,7 +94,11 @@ def video_to_gif_and_images(video, indices):
     ]
 
 
-@spaces.GPU(duration=200)
+def get_duration_single_image_to_long_video(idx: int, guidance_scale: float, fps: int):
+    return 30 * fps
+
+
+@spaces.GPU(duration=get_duration_single_image_to_long_video)
 @torch.autocast("cuda")
 @torch.no_grad()
 def single_image_to_long_video(
@@ -117,7 +121,7 @@ def single_image_to_long_video(
     return export_to_video(gen_video[0].detach().cpu(), fps=fps)
 
 
-@spaces.GPU()
+@spaces.GPU(duration=45)
 @torch.autocast("cuda")
 @torch.no_grad()
 def any_images_to_short_video(
@@ -172,7 +176,7 @@ class CustomProgressBar:
         return getattr(self.pbar, attr)
 
 
-@spaces.GPU()
+@spaces.GPU(duration=45)
 @torch.autocast("cuda")
 @torch.no_grad()
 def navigate_video(
@@ -360,7 +364,14 @@ def _interpolate_between(
     return xs, long_conditions
 
 
-@spaces.GPU(duration=200)
+def get_duration_smooth_navigation(
+    video: torch.Tensor, poses: torch.Tensor, interpolation_factor: int
+):
+    length = (len(video) - 1) * interpolation_factor + 1
+    return 2 * length
+
+
+@spaces.GPU(duration=get_duration_smooth_navigation)
 @torch.autocast("cuda")
 @torch.no_grad()
 def smooth_navigation(
