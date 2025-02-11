@@ -559,6 +559,7 @@ with gr.Blocks(theme=gr.themes.Base(primary_hue="teal")) as demo:
                                 gr.Warning("Select at least one image!")
                                 return "Image", []
                             else:
+                                gr.Info('Click "Generate Video" on the left to start generating now!')
                                 return "Generation", selected_indices
 
                 case "Generation":
@@ -647,6 +648,7 @@ with gr.Blocks(theme=gr.themes.Base(primary_hue="teal")) as demo:
                                 gr.Warning("Image not selected!")
                                 return "Selection"
                             else:
+                                gr.Info('Click "Generate Video" on the left to start generating now!')
                                 return "Generation"
 
                 case "Generation":
@@ -755,6 +757,7 @@ with gr.Blocks(theme=gr.themes.Base(primary_hue="teal")) as demo:
                                 gr.Warning("Image not selected!")
                                 return "Selection", None, None
                             else:
+                                gr.Info('Start navigating with the "Let\'s Navigate!" sidebar on the left now!')
                                 return (
                                     "Generation",
                                     video_list[idx][:1],
