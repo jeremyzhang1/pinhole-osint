@@ -55,8 +55,8 @@ gif_paths = []
 for idx, video, path in zip(
     range(len(video_list)), video_list, metadata["video_paths"]
 ):
-    indices = torch.linspace(0, video.size(0) - 1, 8, dtype=torch.long)
-    gif_paths.append(export_to_gif(video[indices], fps=4))
+    indices = torch.linspace(0, video.size(0) - 1, 16, dtype=torch.long)
+    gif_paths.append(export_to_gif(video[indices], fps=8))
 
 
 # pylint: disable-next=no-value-for-parameter
@@ -115,7 +115,6 @@ def single_image_to_long_video(
     return export_to_video(gen_video[0].detach().cpu(), fps=fps)
 
 
-@spaces.GPU(duration=100)
 @torch.autocast("cuda")
 @torch.no_grad()
 def any_images_to_short_video(
@@ -187,7 +186,7 @@ with gr.Blocks(theme=gr.themes.Base(primary_hue="teal")) as demo:
         gr.Markdown(
             """
             ## Demo 1: Any Number of Images → Short 2-second Video
-            > #### **TL;DR:** _Diffusion Forcing Transformer is a flexible model that can generate videos given variable number of context frames._
+            > #### _Diffusion Forcing Transformer is a flexible model that can generate videos given variable number of context frames._
         """
         )
 
@@ -313,7 +312,7 @@ with gr.Blocks(theme=gr.themes.Base(primary_hue="teal")) as demo:
         gr.Markdown(
             """
             ## Demo 2: Single Image → Long 20-second Video
-            > #### **TL;DR:** _Diffusion Forcing Transformer, with History Guidance, can stably generate long videos, via sliding window rollouts and interpolation._
+            > #### _Diffusion Forcing Transformer, with History Guidance, can generate long videos via sliding window rollouts and temporal super-resolution._
         """
         )
 
@@ -404,7 +403,7 @@ with gr.Blocks(theme=gr.themes.Base(primary_hue="teal")) as demo:
         gr.Markdown(
             """
             ## Demo 3: Single Image → Extremely Long Video
-            > #### **TL;DR:** _TODO._
+            > #### _TODO._
         """
         )
 
