@@ -789,7 +789,9 @@ with gr.Blocks(theme=gr.themes.Base(primary_hue="teal")) as demo:
                         gr.Markdown(
                             """
                             ### Let's Navigate!
-                            **The model will predict the next few frames based on your camera movements. Repeat the process to navigate through the scene.** The most suitable history guidance scheme will be automatically selected based on your camera movements.
+                            - **The model will predict the next few frames based on your camera movements. Repeat the process to continue navigating through the scene.**
+                            - **At the end of your navigation, apply temporal super-resolution to increase the FPS,** also utilizing the DFoT model.
+                            - The most suitable history guidance scheme will be automatically selected based on your camera movements.
                         """
                         )
                         with gr.Tab("Basic", elem_id="basic-controls-tab"):
