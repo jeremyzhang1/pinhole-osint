@@ -470,7 +470,7 @@ with gr.Blocks(theme=gr.themes.Base(primary_hue="teal")) as demo:
     with gr.Accordion("Troubleshooting: Not Working or Too Slow?", open=False):
         gr.Markdown(
             """
-            - Error or Unexpected Results? _Please try again after refreshing the page and ensure you do not click the same button multiple times.
+            - Error or Unexpected Results? _Please try again after refreshing the page and ensure you do not click the same button multiple times._
             - Performance Issues or No GPU Allocation? _Consider running the demo locally by cloning the repository (click the dots in the top-right corner). Alternatively, you can subscribe to Hugging Face Pro for an increased GPU quota._
             """
         )
