@@ -124,13 +124,19 @@ def any_images_to_short_video(
     scene_idx: int,
     image_indices: List[int],
     guidance_scale: float,
-    progress=gr.Progress(track_tqdm=True),
 ):
     video = video_list[scene_idx]
     poses = poses_list[scene_idx]
     indices = torch.linspace(0, video.size(0) - 1, 8, dtype=torch.long)
     xs = video[indices].unsqueeze(0).to("cuda")
     conditions = poses[indices].unsqueeze(0).to("cuda")
+    pbar = CustomProgressBar(
+        gr.Progress(track_tqdm=True).tqdm(
+            iterable=None,
+            desc="Sampling",
+            total=dfot.sampling_timesteps,
+        )
+    )
     gen_video = dfot._unnormalize_x(
         dfot._sample_sequence(
             batch_size=1,
@@ -143,6 +149,7 @@ def any_images_to_short_video(
                 guidance_scale=guidance_scale,
                 visualize=False,
             ),
+            pbar=pbar,
         )[0]
     )
     gen_video = (
