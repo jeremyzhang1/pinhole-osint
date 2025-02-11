@@ -179,8 +179,14 @@ with gr.Blocks(theme=gr.themes.Base(primary_hue="teal")) as demo:
             value="🤗 Pretrained Models", link="https://huggingface.co/kiwhansong/DFoT"
         )
 
-    with gr.Accordion("Troubleshooting: not working or too slow?", open=False):
-        gr.Markdown("TODO")
+    with gr.Accordion("Troubleshooting: Not Working or Too Slow?", open=False):
+        gr.Markdown(
+            """
+            - Error or Unexpected Results? _Please try again after refreshing the page._
+            - Performance Issues or No GPU Allocation? _Consider running the demo locally by cloning the repository (click the dots in the top-right corner)_.
+            """
+        )
+
 
     with gr.Tab("Any # of Images → Short Video", id="task-1"):
         gr.Markdown(
