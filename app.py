@@ -428,7 +428,7 @@ with gr.Blocks(theme=gr.themes.Base(primary_hue="teal")) as demo:
     """
     )
 
-    gr.Markdown("# Diffusion Forcing Transformer and History Guidance")
+    gr.Markdown("# Diffusion Forcing Transformer with History Guidance")
     gr.Markdown(
         "### Official Interactive Demo for [_History-guided Video Diffusion_](todo)"
     )
