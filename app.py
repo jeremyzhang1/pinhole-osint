@@ -63,6 +63,7 @@ for idx, video, path in zip(
 # pylint: disable-next=no-value-for-parameter
 dfot = DFoTVideoPose.load_from_checkpoint(
     checkpoint_path=download_pretrained("pretrained:DFoT_RE10K.ckpt"),
+    map_location="cpu",
     cfg=OmegaConf.load("config.yaml"),
 ).eval()
 dfot.to("cuda")
@@ -651,7 +652,7 @@ with gr.Blocks(theme=gr.themes.Base(primary_hue="teal")) as demo:
                         demo2_fps = gr.Slider(
                             minimum=4,
                             maximum=20,
-                            value=8,
+                            value=4,
                             step=1,
                             label="FPS",
                             info=f"A {LONG_LENGTH}-second video will be generated at this FPS; Decrease for faster generation; Increase for a smoother video",
