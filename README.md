@@ -1,6 +1,6 @@
 ---
 title: Diffusion Forcing Transformer
-emoji: 📚
+emoji: ✨
 colorFrom: indigo
 colorTo: green
 sdk: gradio
