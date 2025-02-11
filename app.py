@@ -243,7 +243,7 @@ def navigate_video(
         .cpu()
     )
     gen_video = torch.cat([video, next_video], dim=0)
-    poses = conditions[0]
+    poses = conditions[0].detach().cpu()
 
     images = (gen_video.permute(0, 2, 3, 1) * 255).clamp(0, 255).to(torch.uint8).numpy()
 
@@ -254,6 +254,7 @@ def navigate_video(
         export_to_video(gen_video, fps=NAVIGATION_FPS),
         [(image, f"t={i}") for i, image in enumerate(images)],
     )
+
 
 def undo_navigation(
     video: torch.Tensor,
@@ -272,6 +273,7 @@ def undo_navigation(
         export_to_video(video, fps=NAVIGATION_FPS),
         [(image, f"t={i}") for i, image in enumerate(images)],
     )
+
 
 def _interpolate_conditions(conditions, indices):
     """
@@ -307,9 +309,7 @@ def _interpolate_conditions(conditions, indices):
 
     return conditions
 
-@spaces.GPU(duration=300)
-@torch.autocast("cuda")
-@torch.no_grad()
+
 def _interpolate_between(
     xs: torch.Tensor,
     conditions: torch.Tensor,
@@ -356,6 +356,10 @@ def _interpolate_between(
     )
     return xs, long_conditions
 
+
+@spaces.GPU(duration=300)
+@torch.autocast("cuda")
+@torch.no_grad()
 def smooth_navigation(
     video: torch.Tensor,
     poses: torch.Tensor,
@@ -371,7 +375,7 @@ def smooth_navigation(
             interpolation_factor,
         )
         video = dfot._unnormalize_x(video)[0].detach().cpu()
-        poses = poses[0]
+        poses = poses[0].detach().cpu()
     images = (video.permute(0, 2, 3, 1) * 255).clamp(0, 255).to(torch.uint8).numpy()
     return (
         video,
@@ -380,8 +384,6 @@ def smooth_navigation(
         export_to_video(video, fps=NAVIGATION_FPS * interpolation_factor),
         [(image, f"t={i}") for i, image in enumerate(images)],
     )
-
-
 
 
 # Create the Gradio Blocks
@@ -487,7 +489,9 @@ with gr.Blocks(theme=gr.themes.Base(primary_hue="teal")) as demo:
                         def update_selection(selection: gr.SelectData):
                             return selection.index
 
-                        demo1_scene_select_button = gr.Button("Select Scene", variant="primary")
+                        demo1_scene_select_button = gr.Button(
+                            "Select Scene", variant="primary"
+                        )
 
                         @demo1_scene_select_button.click(
                             inputs=demo1_selected_scene_index, outputs=demo1_stage
@@ -519,7 +523,9 @@ with gr.Blocks(theme=gr.themes.Base(primary_hue="teal")) as demo:
                             choices=[(f"t={i}", i) for i in range(8)],
                             value=[],
                         )
-                        demo1_image_select_button = gr.Button("Select Input Images", variant="primary")
+                        demo1_image_select_button = gr.Button(
+                            "Select Input Images", variant="primary"
+                        )
 
                         @demo1_image_select_button.click(
                             inputs=[demo1_selector],
@@ -606,7 +612,9 @@ with gr.Blocks(theme=gr.themes.Base(primary_hue="teal")) as demo:
                         def update_selection(selection: gr.SelectData):
                             return selection.index
 
-                        demo2_select_button = gr.Button("Select Input Image", variant="primary")
+                        demo2_select_button = gr.Button(
+                            "Select Input Image", variant="primary"
+                        )
 
                         @demo2_select_button.click(
                             inputs=demo2_selected_index, outputs=demo2_stage
@@ -707,7 +715,9 @@ with gr.Blocks(theme=gr.themes.Base(primary_hue="teal")) as demo:
                         def update_selection(selection: gr.SelectData):
                             return selection.index
 
-                        demo3_select_button = gr.Button("Select Input Image", variant="primary")
+                        demo3_select_button = gr.Button(
+                            "Select Input Image", variant="primary"
+                        )
 
                         @demo3_select_button.click(
                             inputs=demo3_selected_index,
@@ -763,14 +773,22 @@ with gr.Blocks(theme=gr.themes.Base(primary_hue="teal")) as demo:
                             with gr.Group():
                                 gr.Markdown("_**Select a direction to move:**_")
                                 with gr.Row(elem_id="basic-controls"):
-                                    gr.Button("↰-60°\nTurn", size="sm", min_width=0, variant="primary").click(
+                                    gr.Button(
+                                        "↰-60°\nTurn",
+                                        size="sm",
+                                        min_width=0,
+                                        variant="primary",
+                                    ).click(
                                         fn=partial(
                                             navigate_video,
                                             x_angle=0,
                                             y_angle=-60,
                                             distance=0,
                                         ),
-                                        inputs=[demo3_current_video, demo3_current_poses],
+                                        inputs=[
+                                            demo3_current_video,
+                                            demo3_current_poses,
+                                        ],
                                         outputs=[
                                             demo3_current_video,
                                             demo3_current_poses,
@@ -780,14 +798,22 @@ with gr.Blocks(theme=gr.themes.Base(primary_hue="teal")) as demo:
                                         ],
                                     )
 
-                                    gr.Button("↖-30°\nVeer", size="sm", min_width=0, variant="primary").click(
+                                    gr.Button(
+                                        "↖-30°\nVeer",
+                                        size="sm",
+                                        min_width=0,
+                                        variant="primary",
+                                    ).click(
                                         fn=partial(
                                             navigate_video,
                                             x_angle=0,
                                             y_angle=-30,
                                             distance=50,
                                         ),
-                                        inputs=[demo3_current_video, demo3_current_poses],
+                                        inputs=[
+                                            demo3_current_video,
+                                            demo3_current_poses,
+                                        ],
                                         outputs=[
                                             demo3_current_video,
                                             demo3_current_poses,
@@ -797,14 +823,22 @@ with gr.Blocks(theme=gr.themes.Base(primary_hue="teal")) as demo:
                                         ],
                                     )
 
-                                    gr.Button("↑0°\nAhead", size="sm", min_width=0, variant="primary").click(
+                                    gr.Button(
+                                        "↑0°\nAhead",
+                                        size="sm",
+                                        min_width=0,
+                                        variant="primary",
+                                    ).click(
                                         fn=partial(
                                             navigate_video,
                                             x_angle=0,
                                             y_angle=0,
                                             distance=100,
                                         ),
-                                        inputs=[demo3_current_video, demo3_current_poses],
+                                        inputs=[
+                                            demo3_current_video,
+                                            demo3_current_poses,
+                                        ],
                                         outputs=[
                                             demo3_current_video,
                                             demo3_current_poses,
@@ -813,14 +847,22 @@ with gr.Blocks(theme=gr.themes.Base(primary_hue="teal")) as demo:
                                             demo3_generated_gallery,
                                         ],
                                     )
-                                    gr.Button("↗30°\nVeer", size="sm", min_width=0, variant="primary").click(
+                                    gr.Button(
+                                        "↗30°\nVeer",
+                                        size="sm",
+                                        min_width=0,
+                                        variant="primary",
+                                    ).click(
                                         fn=partial(
                                             navigate_video,
                                             x_angle=0,
                                             y_angle=30,
                                             distance=50,
                                         ),
-                                        inputs=[demo3_current_video, demo3_current_poses],
+                                        inputs=[
+                                            demo3_current_video,
+                                            demo3_current_poses,
+                                        ],
                                         outputs=[
                                             demo3_current_video,
                                             demo3_current_poses,
@@ -829,14 +871,22 @@ with gr.Blocks(theme=gr.themes.Base(primary_hue="teal")) as demo:
                                             demo3_generated_gallery,
                                         ],
                                     )
-                                    gr.Button("↱\n60° Turn", size="sm", min_width=0, variant="primary").click(
+                                    gr.Button(
+                                        "↱\n60° Turn",
+                                        size="sm",
+                                        min_width=0,
+                                        variant="primary",
+                                    ).click(
                                         fn=partial(
                                             navigate_video,
                                             x_angle=0,
                                             y_angle=60,
                                             distance=0,
                                         ),
-                                        inputs=[demo3_current_video, demo3_current_poses],
+                                        inputs=[
+                                            demo3_current_video,
+                                            demo3_current_poses,
+                                        ],
                                         outputs=[
                                             demo3_current_video,
                                             demo3_current_poses,
@@ -874,11 +924,17 @@ with gr.Blocks(theme=gr.themes.Base(primary_hue="teal")) as demo:
                                     interactive=True,
                                 )
 
-                                gr.Button("Generate Next Move", variant="primary").click(
-                                    fn=partial(
-                                        navigate_video,
-                                    ),
-                                    inputs=[demo3_current_video, demo3_current_poses, demo3_x_angle, demo3_y_angle, demo3_distance],
+                                gr.Button(
+                                    "Generate Next Move", variant="primary"
+                                ).click(
+                                    fn=navigate_video,
+                                    inputs=[
+                                        demo3_current_video,
+                                        demo3_current_poses,
+                                        demo3_x_angle,
+                                        demo3_y_angle,
+                                        demo3_distance,
+                                    ],
                                     outputs=[
                                         demo3_current_video,
                                         demo3_current_poses,
@@ -901,8 +957,10 @@ with gr.Blocks(theme=gr.themes.Base(primary_hue="teal")) as demo:
                                 ],
                             )
                         with gr.Group():
-                            gr.Markdown("_At the end, apply temporal super-resolution to obtain a smoother video:_")
-                            demo3_interpolation_factor=gr.Slider(
+                            gr.Markdown(
+                                "_At the end, apply temporal super-resolution to obtain a smoother video:_"
+                            )
+                            demo3_interpolation_factor = gr.Slider(
                                 minimum=2,
                                 maximum=10,
                                 value=2,
@@ -912,7 +970,11 @@ with gr.Blocks(theme=gr.themes.Base(primary_hue="teal")) as demo:
                             )
                             gr.Button("Smooth Out Video", variant="huggingface").click(
                                 fn=smooth_navigation,
-                                inputs=[demo3_current_video, demo3_current_poses, demo3_interpolation_factor],
+                                inputs=[
+                                    demo3_current_video,
+                                    demo3_current_poses,
+                                    demo3_interpolation_factor,
+                                ],
                                 outputs=[
                                     demo3_current_video,
                                     demo3_current_poses,
