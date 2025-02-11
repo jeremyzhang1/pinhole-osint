@@ -260,9 +260,12 @@ def undo_navigation(
     video: torch.Tensor,
     poses: torch.Tensor,
 ):
-    if len(video) >= 8:
+    if len(video) > 8:
         video = video[:-4]
         poses = poses[:-4]
+    elif len(video) == 8:
+        video = video[:1]
+        poses = poses[:1]
     else:
         gr.Warning("You have no moves left to undo!")
     images = (video.permute(0, 2, 3, 1) * 255).clamp(0, 255).to(torch.uint8).numpy()
