@@ -536,7 +536,7 @@ with gr.Blocks(theme=gr.themes.Base(primary_hue="teal")) as demo:
                                     prepare_short_gt_video(scene_idx)
                                 )
                             ],
-                            label="Select Images to Animate",
+                            label="Select Input Images",
                             columns=[8],
                         )
 
@@ -988,7 +988,7 @@ with gr.Blocks(theme=gr.themes.Base(primary_hue="teal")) as demo:
                                 maximum=10,
                                 value=2,
                                 step=1,
-                                label="Interpolation Factor",
+                                label="By a Factor of",
                                 interactive=True,
                             )
                             gr.Button("Smooth Out Video", variant="huggingface").click(
