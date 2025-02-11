@@ -169,8 +169,8 @@ with gr.Blocks(theme=gr.themes.Base(primary_hue="teal")) as demo:
         "### Official Interactive Demo for [_History-guided Video Diffusion_](todo)"
     )
     with gr.Row():
-        gr.Button(value="🌐 Website", link="todo")
-        gr.Button(value="📄 Paper", link="https://boyuan.space/history-guidance")
+        gr.Button(value="🌐 Website", link="https://boyuan.space/history-guidance")
+        gr.Button(value="📄 Paper", link="https://arxiv.org/abs/2502.06764")
         gr.Button(
             value="💻 Code",
             link="https://github.com/kwsong0113/diffusion-forcing-transformer",
@@ -381,7 +381,7 @@ with gr.Blocks(theme=gr.themes.Base(primary_hue="teal")) as demo:
                                 interactive=True,
                             )
                             demo2_fps = gr.Slider(
-                                minimum=1,
+                                minimum=2,
                                 maximum=10,
                                 value=4,
                                 step=1,
