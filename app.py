@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Literal
 from pathlib import Path
 from functools import partial
 import spaces
@@ -137,7 +137,7 @@ def any_images_to_short_video(
     pbar = CustomProgressBar(
         gr.Progress(track_tqdm=True).tqdm(
             iterable=None,
-            desc="Sampling",
+            desc="Sampling with DFoT",
             total=dfot.sampling_timesteps,
         )
     )
@@ -200,7 +200,7 @@ def navigate_video(
     pbar = CustomProgressBar(
         gr.Progress(track_tqdm=True).tqdm(
             iterable=None,
-            desc=f"Predicting next {n_prediction_frames} frames",
+            desc=f"Predicting next {n_prediction_frames} frames with DFoT",
             total=dfot.sampling_timesteps,
         )
     )
@@ -408,363 +408,237 @@ def smooth_navigation(
         [(image, f"t={i}") for i, image in enumerate(images)],
     )
 
-
-# Create the Gradio Blocks
-with gr.Blocks(theme=gr.themes.Base(primary_hue="teal")) as demo:
-    gr.HTML(
-        """
-    <style>
-    [data-tab-id="task-1"], [data-tab-id="task-2"], [data-tab-id="task-3"] {
-        font-size: 16px !important;
-        font-weight: bold;
-    }
-    #header-button .button-icon {
-        margin-right: 8px;
-    }
-    #basic-controls {
-        column-gap: 0px;
-    }
-    #basic-controls button {
-        border: 1px solid #e4e4e7;
-    }
-    #basic-controls-tab {
-        padding: 0px;
-    }
-    #advanced-controls-tab {
-        padding: 0px;
-    }
-    </style>
-    """
-    )
-
-    gr.Markdown("# Diffusion Forcing Transformer with History Guidance")
+def render_demo1(s: Literal["Selection", "Generation"], idx: int, demo1_stage: gr.State, demo1_selected_index: gr.State):
     gr.Markdown(
-        "### Official Interactive Demo for [_History-guided Video Diffusion_](https://arxiv.org/abs/2502.06764)"
+        f"""
+        ## Demo 1: Single Image → Long {LONG_LENGTH}-second Video
+        > #### _Diffusion Forcing Transformer can generate long videos via sliding window rollouts and temporal super-resolution._
+    """,
+    elem_classes=["task-title"]
     )
-    with gr.Row():
-        gr.Button(
-            value="Website",
-            link="https://boyuan.space/history-guidance",
-            icon="https://simpleicons.org/icons/googlechrome.svg",
-            elem_id="header-button",
-        )
-        gr.Button(
-            value="Paper",
-            link="https://arxiv.org/abs/2502.06764",
-            icon="https://simpleicons.org/icons/arxiv.svg",
-            elem_id="header-button",
-        )
-        gr.Button(
-            value="Code",
-            link="https://github.com/kwsong0113/diffusion-forcing-transformer",
-            icon="https://simpleicons.org/icons/github.svg",
-            elem_id="header-button",
-        )
-        gr.Button(
-            value="Pretrained Models",
-            link="https://huggingface.co/kiwhansong/DFoT",
-            icon="https://simpleicons.org/icons/huggingface.svg",
-            elem_id="header-button",
-        )
+    match s:
+        case "Selection":
+            with gr.Group():
+                demo1_image_gallery = gr.Gallery(
+                    height=300,
+                    value=first_frame_list,
+                    label="Select an Image to Animate",
+                    columns=[8],
+                    selected_index=idx,
+                    allow_preview=False,
+                    preview=False,
+                )
 
-    with gr.Accordion("Troubleshooting: Not Working or Too Slow?", open=False):
-        gr.Markdown(
-            """
-            - Error or Unexpected Results? _Please try again after refreshing the page and ensure you do not click the same button multiple times._
-            - Performance Issues or No GPU Allocation? _Consider running the demo locally (click the dots in the top-right corner). Alternatively, you can subscribe to Hugging Face Pro for an increased GPU quota._
-            """
-        )
+                @demo1_image_gallery.select(
+                    inputs=None, outputs=[demo1_stage, demo1_selected_index]
+                )
+                def move_to_generation(selection: gr.SelectData):
+                    return "Generation", selection.index
 
-    with gr.Tab("Any # of Images → Short Video", id="task-1"):
-        gr.Markdown(
-            """
-            ## Demo 1: Any Number of Images → Short 2-second Video
-            > #### _Diffusion Forcing Transformer is a flexible model that can generate videos given variable number of context frames._
+        case "Generation":
+            with gr.Row():
+                gr.Image(
+                    value=first_frame_list[idx],
+                    label="Input Image",
+                    width=256,
+                    height=256,
+                )
+                gr.Video(
+                    value=prepare_long_gt_video(idx),
+                    label="Ground Truth Video",
+                    width=256,
+                    height=256,
+                    autoplay=True,
+                    loop=True,
+                )
+                demo1_video = gr.Video(
+                    label="Generated Video",
+                    width=256,
+                    height=256,
+                    autoplay=True,
+                    loop=True,
+                    show_share_button=True,
+                    show_download_button=True,
+                )
+
+            gr.Markdown("### Generation Controls ↓")
+            demo1_guidance_scale = gr.Slider(
+                minimum=1,
+                maximum=6,
+                value=4,
+                step=0.5,
+                label="History Guidance Scale",
+                info="Without history guidance: 1.0; Recommended: 4.0",
+                interactive=True,
+            )
+            demo1_fps = gr.Slider(
+                minimum=4,
+                maximum=20,
+                value=4,
+                step=1,
+                label="FPS",
+                info=f"A {LONG_LENGTH}-second video will be generated at this FPS; Decrease for faster generation; Increase for a smoother video",
+                interactive=True,
+            )
+            gr.Button("Generate Video", variant="primary").click(
+                fn=single_image_to_long_video,
+                inputs=[
+                    demo1_selected_index,
+                    demo1_guidance_scale,
+                    demo1_fps,
+                ],
+                outputs=demo1_video,
+            )
+
+def render_demo2(s: Literal["Scene", "Image", "Generation"], scene_idx: int, image_indices: List[int], demo2_stage: gr.State, demo2_selected_scene_index: gr.State, demo2_selected_image_indices: gr.State):
+    gr.Markdown(
         """
-        )
+        ## Demo 2: Any Number of Images → Short 2-second Video
+        > #### _Diffusion Forcing Transformer is a flexible model that can generate videos given variable number of context frames._
+    """,
+    elem_classes=["task-title"]
+    )
 
-        demo1_stage = gr.State(value="Scene")
-        demo1_selected_scene_index = gr.State(value=None)
-        demo1_selected_image_indices = gr.State(value=[])
+    match s:
+        case "Scene":
+            with gr.Group():
+                demo2_scene_gallery = gr.Gallery(
+                    height=300,
+                    value=gif_paths,
+                    label="Select a Scene to Generate Video",
+                    columns=[8],
+                    selected_index=scene_idx,
+                    allow_preview=False,
+                    preview=False,
+                )
 
-        @gr.render(
-            inputs=[
-                demo1_stage,
-                demo1_selected_scene_index,
-                demo1_selected_image_indices,
-            ]
-        )
-        def render_stage(s, scene_idx, image_indices):
-            match s:
-                case "Scene":
-                    with gr.Group():
-                        demo1_scene_gallery = gr.Gallery(
-                            height=300,
-                            value=gif_paths,
-                            label="Select a Scene to Generate Video",
-                            columns=[8],
-                            selected_index=scene_idx,
-                        )
+                @demo2_scene_gallery.select(
+                    inputs=None, outputs=[demo2_stage, demo2_selected_scene_index]
+                )
+                def move_to_image_selection(selection: gr.SelectData):
+                    return "Image", selection.index
 
-                        @demo1_scene_gallery.select(
-                            inputs=None, outputs=demo1_selected_scene_index
+        case "Image":
+            with gr.Group():
+                demo2_image_gallery = gr.Gallery(
+                    height=150,
+                    value=[
+                        (image, f"t={i}")
+                        for i, image in enumerate(
+                            prepare_short_gt_video(scene_idx)
                         )
-                        def update_selection(selection: gr.SelectData):
-                            return selection.index
+                    ],
+                    label="Select Input Images",
+                    columns=[8],
+                )
 
-                        demo1_scene_select_button = gr.Button(
-                            "Select Scene", variant="primary"
-                        )
+                demo2_selector = gr.CheckboxGroup(
+                    label="Select Any Number of Input Images",
+                    info="Image-to-Video: Select t=0; Interpolation: Select t=0 and t=7",
+                    choices=[(f"t={i}", i) for i in range(8)],
+                    value=[],
+                )
+                demo2_image_select_button = gr.Button(
+                    "Next Step", variant="primary"
+                )
 
-                        @demo1_scene_select_button.click(
-                            inputs=demo1_selected_scene_index, outputs=demo1_stage
-                        )
-                        def move_to_image_selection(scene_idx: int):
-                            if scene_idx is None:
-                                gr.Warning("Scene not selected!")
-                                return "Scene"
-                            else:
-                                return "Image"
+                @demo2_image_select_button.click(
+                    inputs=[demo2_selector],
+                    outputs=[demo2_stage, demo2_selected_image_indices],
+                )
+                def generate_video(selected_indices):
+                    if len(selected_indices) == 0:
+                        gr.Warning("Select at least one image!")
+                        return "Image", []
+                    else:
+                        return "Generation", selected_indices
 
-                case "Image":
-                    with gr.Group():
-                        demo1_image_gallery = gr.Gallery(
-                            height=150,
-                            value=[
-                                (image, f"t={i}")
-                                for i, image in enumerate(
-                                    prepare_short_gt_video(scene_idx)
-                                )
-                            ],
-                            label="Select Input Images",
-                            columns=[8],
-                        )
+        case "Generation":
+            with gr.Group():
+                gt_video = prepare_short_gt_video(scene_idx)
 
-                        demo1_selector = gr.CheckboxGroup(
-                            label="Select Any Number of Input Images",
-                            info="Image-to-Video: Select t=0; Interpolation: Select t=0 and t=7",
-                            choices=[(f"t={i}", i) for i in range(8)],
-                            value=[],
-                        )
-                        demo1_image_select_button = gr.Button(
-                            "Select Input Images", variant="primary"
-                        )
+                demo2_input_image_gallery = gr.Gallery(
+                    height=150,
+                    value=video_to_gif_and_images(gt_video, image_indices),
+                    label="Input Images",
+                    columns=[9],
+                )
+                demo2_generated_gallery = gr.Gallery(
+                    height=150,
+                    value=[],
+                    label="Generated Video",
+                    columns=[9],
+                )
 
-                        @demo1_image_select_button.click(
-                            inputs=[demo1_selector],
-                            outputs=[demo1_stage, demo1_selected_image_indices],
-                        )
-                        def generate_video(selected_indices):
-                            if len(selected_indices) == 0:
-                                gr.Warning("Select at least one image!")
-                                return "Image", []
-                            else:
-                                gr.Info('Click "Generate Video" on the left to start generating now!')
-                                return "Generation", selected_indices
+                demo2_ground_truth_gallery = gr.Gallery(
+                    height=150,
+                    value=video_to_gif_and_images(gt_video, list(range(8))),
+                    label="Ground Truth Video",
+                    columns=[9],
+                )
+            gr.Markdown("### Generation Controls ↓")
+            demo2_guidance_scale = gr.Slider(
+                minimum=1,
+                maximum=6,
+                value=4,
+                step=0.5,
+                label="History Guidance Scale",
+                info="Without history guidance: 1.0; Recommended: 4.0",
+                interactive=True,
+            )
+            gr.Button("Generate Video", variant="primary").click(
+                fn=any_images_to_short_video,
+                inputs=[
+                    demo2_selected_scene_index,
+                    demo2_selected_image_indices,
+                    demo2_guidance_scale,
+                ],
+                outputs=demo2_generated_gallery,
+            )
 
-                case "Generation":
-                    with gr.Group():
-                        gt_video = prepare_short_gt_video(scene_idx)
-
-                        demo1_input_image_gallery = gr.Gallery(
-                            height=150,
-                            value=video_to_gif_and_images(gt_video, image_indices),
-                            label="Input Images",
-                            columns=[9],
-                        )
-                        demo1_generated_gallery = gr.Gallery(
-                            height=150,
-                            value=[],
-                            label="Generated Video",
-                            columns=[9],
-                        )
-
-                        demo1_ground_truth_gallery = gr.Gallery(
-                            height=150,
-                            value=video_to_gif_and_images(gt_video, list(range(8))),
-                            label="Ground Truth Video",
-                            columns=[9],
-                        )
-                    with gr.Sidebar():
-                        gr.Markdown("### Sampling Parameters")
-                        demo1_guidance_scale = gr.Slider(
-                            minimum=1,
-                            maximum=6,
-                            value=4,
-                            step=0.5,
-                            label="History Guidance Scale",
-                            info="Without history guidance: 1.0; Recommended: 4.0",
-                            interactive=True,
-                        )
-                        gr.Button("Generate Video", variant="primary").click(
-                            fn=any_images_to_short_video,
-                            inputs=[
-                                demo1_selected_scene_index,
-                                demo1_selected_image_indices,
-                                demo1_guidance_scale,
-                            ],
-                            outputs=demo1_generated_gallery,
-                        )
-
-    with gr.Tab("Single Image → Long Video", id="task-2"):
-        gr.Markdown(
-            f"""
-            ## Demo 2: Single Image → Long {LONG_LENGTH}-second Video
-            > #### _Diffusion Forcing Transformer, with History Guidance, can generate long videos via sliding window rollouts and temporal super-resolution._
+def render_demo3(
+    s: Literal["Selection", "Generation"],
+    idx: int,
+    demo3_stage: gr.State,
+    demo3_selected_index: gr.State,
+    demo3_current_video: gr.State,
+    demo3_current_poses: gr.State
+):
+    gr.Markdown(
         """
-        )
+        ## Demo 3: Single Image → Extremely Long Video _(Navigate with Your Camera Movements!)_
+        > #### _History Guidance significantly improves quality and temporal consistency, enabling stable rollouts for extremely long videos._
+    """,
+    elem_classes=["task-title"]
+    )
+    match s:
+        case "Selection":
+            with gr.Group():
+                demo3_image_gallery = gr.Gallery(
+                    height=300,
+                    value=first_frame_list,
+                    label="Select an Image to Start Navigation",
+                    columns=[8],
+                    selected_index=idx,
+                    allow_preview=False,
+                    preview=False,
+                )
 
-        demo2_stage = gr.State(value="Selection")
-        demo2_selected_index = gr.State(value=None)
+                @demo3_image_gallery.select(
+                    inputs=None, outputs=[demo3_stage, demo3_selected_index, demo3_current_video, demo3_current_poses]
+                )
+                def move_to_generation(selection: gr.SelectData):
+                    idx = selection.index
+                    return (
+                        "Generation",
+                        idx,
+                        video_list[idx][:1],
+                        poses_list[idx][:1],
+                    )
 
-        @gr.render(inputs=[demo2_stage, demo2_selected_index])
-        def render_stage(s, idx):
-            match s:
-                case "Selection":
-                    with gr.Group():
-                        demo2_image_gallery = gr.Gallery(
-                            height=300,
-                            value=first_frame_list,
-                            label="Select an Image to Animate",
-                            columns=[8],
-                            selected_index=idx,
-                        )
-
-                        @demo2_image_gallery.select(
-                            inputs=None, outputs=demo2_selected_index
-                        )
-                        def update_selection(selection: gr.SelectData):
-                            return selection.index
-
-                        demo2_select_button = gr.Button(
-                            "Select Input Image", variant="primary"
-                        )
-
-                        @demo2_select_button.click(
-                            inputs=demo2_selected_index, outputs=demo2_stage
-                        )
-                        def move_to_generation(idx: int):
-                            if idx is None:
-                                gr.Warning("Image not selected!")
-                                return "Selection"
-                            else:
-                                gr.Info('Click "Generate Video" on the left to start generating now!')
-                                return "Generation"
-
-                case "Generation":
-                    with gr.Row():
-                        gr.Image(
-                            value=first_frame_list[idx],
-                            label="Input Image",
-                            width=256,
-                            height=256,
-                        )
-                        gr.Video(
-                            value=prepare_long_gt_video(idx),
-                            label="Ground Truth Video",
-                            width=256,
-                            height=256,
-                            autoplay=True,
-                            loop=True,
-                        )
-                        demo2_video = gr.Video(
-                            label="Generated Video",
-                            width=256,
-                            height=256,
-                            autoplay=True,
-                            loop=True,
-                            show_share_button=True,
-                            show_download_button=True,
-                        )
-
-                    with gr.Sidebar():
-                        gr.Markdown("### Sampling Parameters")
-
-                        demo2_guidance_scale = gr.Slider(
-                            minimum=1,
-                            maximum=6,
-                            value=4,
-                            step=0.5,
-                            label="History Guidance Scale",
-                            info="Without history guidance: 1.0; Recommended: 4.0",
-                            interactive=True,
-                        )
-                        demo2_fps = gr.Slider(
-                            minimum=4,
-                            maximum=20,
-                            value=4,
-                            step=1,
-                            label="FPS",
-                            info=f"A {LONG_LENGTH}-second video will be generated at this FPS; Decrease for faster generation; Increase for a smoother video",
-                            interactive=True,
-                        )
-                        gr.Button("Generate Video", variant="primary").click(
-                            fn=single_image_to_long_video,
-                            inputs=[
-                                demo2_selected_index,
-                                demo2_guidance_scale,
-                                demo2_fps,
-                            ],
-                            outputs=demo2_video,
-                        )
-
-    with gr.Tab("Single Image → Endless Video Navigation", id="task-3"):
-        gr.Markdown(
-            """
-            ## Demo 3: Single Image → Extremely Long Video _(Navigate with Your Camera Movements!)_
-            > #### _History Guidance significantly improves quality and temporal consistency, enabling stable rollouts for extremely long videos._
-        """
-        )
-
-        demo3_stage = gr.State(value="Selection")
-        demo3_selected_index = gr.State(value=None)
-        demo3_current_video = gr.State(value=None)
-        demo3_current_poses = gr.State(value=None)
-
-        @gr.render(inputs=[demo3_stage, demo3_selected_index])
-        def render_stage(s, idx):
-            match s:
-                case "Selection":
-                    with gr.Group():
-                        demo3_image_gallery = gr.Gallery(
-                            height=300,
-                            value=first_frame_list,
-                            label="Select an Image to Start Navigation",
-                            columns=[8],
-                            selected_index=idx,
-                        )
-
-                        @demo3_image_gallery.select(
-                            inputs=None, outputs=demo3_selected_index
-                        )
-                        def update_selection(selection: gr.SelectData):
-                            return selection.index
-
-                        demo3_select_button = gr.Button(
-                            "Select Input Image", variant="primary"
-                        )
-
-                        @demo3_select_button.click(
-                            inputs=demo3_selected_index,
-                            outputs=[
-                                demo3_stage,
-                                demo3_current_video,
-                                demo3_current_poses,
-                            ],
-                        )
-                        def move_to_generation(idx: int):
-                            if idx is None:
-                                gr.Warning("Image not selected!")
-                                return "Selection", None, None
-                            else:
-                                gr.Info('Start navigating with the "Let\'s Navigate!" sidebar on the left now!')
-                                return (
-                                    "Generation",
-                                    video_list[idx][:1],
-                                    poses_list[idx][:1],
-                                )
-
-                case "Generation":
+        case "Generation":
+            with gr.Row():
+                with gr.Column(scale=3):
                     with gr.Row():
                         demo3_current_view = gr.Image(
                             value=first_frame_list[idx],
@@ -785,183 +659,36 @@ with gr.Blocks(theme=gr.themes.Base(primary_hue="teal")) as demo:
                     demo3_generated_gallery = gr.Gallery(
                         value=[],
                         label="Generated Frames",
-                        columns=[8],
+                        columns=[6],
                     )
 
-                    with gr.Sidebar():
-                        gr.Markdown(
-                            """
-                            ### Let's Navigate!
+                with gr.Column():
+                    gr.Markdown("### Navigation Controls ↓")
+                    with gr.Accordion("Instructions", open=False):
+                        gr.Markdown("""
                             - **The model will predict the next few frames based on your camera movements. Repeat the process to continue navigating through the scene.**
                             - **At the end of your navigation, apply temporal super-resolution to increase the FPS,** also utilizing the DFoT model.
-                            - The most suitable history guidance scheme will be automatically selected based on your camera movements.
-                        """
-                        )
-                        with gr.Tab("Basic", elem_id="basic-controls-tab"):
-                            with gr.Group():
-                                gr.Markdown("_**Select a direction to move:**_")
-                                with gr.Row(elem_id="basic-controls"):
-                                    gr.Button(
-                                        "↰-60°\nTurn",
-                                        size="sm",
-                                        min_width=0,
-                                        variant="primary",
-                                    ).click(
-                                        fn=partial(
-                                            navigate_video,
-                                            x_angle=0,
-                                            y_angle=-60,
-                                            distance=0,
-                                        ),
-                                        inputs=[
-                                            demo3_current_video,
-                                            demo3_current_poses,
-                                        ],
-                                        outputs=[
-                                            demo3_current_video,
-                                            demo3_current_poses,
-                                            demo3_current_view,
-                                            demo3_video,
-                                            demo3_generated_gallery,
-                                        ],
-                                    )
-
-                                    gr.Button(
-                                        "↖-30°\nVeer",
-                                        size="sm",
-                                        min_width=0,
-                                        variant="primary",
-                                    ).click(
-                                        fn=partial(
-                                            navigate_video,
-                                            x_angle=0,
-                                            y_angle=-30,
-                                            distance=50,
-                                        ),
-                                        inputs=[
-                                            demo3_current_video,
-                                            demo3_current_poses,
-                                        ],
-                                        outputs=[
-                                            demo3_current_video,
-                                            demo3_current_poses,
-                                            demo3_current_view,
-                                            demo3_video,
-                                            demo3_generated_gallery,
-                                        ],
-                                    )
-
-                                    gr.Button(
-                                        "↑0°\nAhead",
-                                        size="sm",
-                                        min_width=0,
-                                        variant="primary",
-                                    ).click(
-                                        fn=partial(
-                                            navigate_video,
-                                            x_angle=0,
-                                            y_angle=0,
-                                            distance=100,
-                                        ),
-                                        inputs=[
-                                            demo3_current_video,
-                                            demo3_current_poses,
-                                        ],
-                                        outputs=[
-                                            demo3_current_video,
-                                            demo3_current_poses,
-                                            demo3_current_view,
-                                            demo3_video,
-                                            demo3_generated_gallery,
-                                        ],
-                                    )
-                                    gr.Button(
-                                        "↗30°\nVeer",
-                                        size="sm",
-                                        min_width=0,
-                                        variant="primary",
-                                    ).click(
-                                        fn=partial(
-                                            navigate_video,
-                                            x_angle=0,
-                                            y_angle=30,
-                                            distance=50,
-                                        ),
-                                        inputs=[
-                                            demo3_current_video,
-                                            demo3_current_poses,
-                                        ],
-                                        outputs=[
-                                            demo3_current_video,
-                                            demo3_current_poses,
-                                            demo3_current_view,
-                                            demo3_video,
-                                            demo3_generated_gallery,
-                                        ],
-                                    )
-                                    gr.Button(
-                                        "↱\n60° Turn",
-                                        size="sm",
-                                        min_width=0,
-                                        variant="primary",
-                                    ).click(
-                                        fn=partial(
-                                            navigate_video,
-                                            x_angle=0,
-                                            y_angle=60,
-                                            distance=0,
-                                        ),
-                                        inputs=[
-                                            demo3_current_video,
-                                            demo3_current_poses,
-                                        ],
-                                        outputs=[
-                                            demo3_current_video,
-                                            demo3_current_poses,
-                                            demo3_current_view,
-                                            demo3_video,
-                                            demo3_generated_gallery,
-                                        ],
-                                    )
-                        with gr.Tab("Advanced", elem_id="advanced-controls-tab"):
-                            with gr.Group():
-                                gr.Markdown("_**Select angles and distance:**_")
-
-                                demo3_y_angle = gr.Slider(
-                                    minimum=-90,
-                                    maximum=90,
-                                    value=0,
-                                    step=10,
-                                    label="Horizontal Angle",
-                                    interactive=True,
-                                )
-                                demo3_x_angle = gr.Slider(
-                                    minimum=-40,
-                                    maximum=40,
-                                    value=0,
-                                    step=10,
-                                    label="Vertical Angle",
-                                    interactive=True,
-                                )
-                                demo3_distance = gr.Slider(
-                                    minimum=0,
-                                    maximum=200,
-                                    value=100,
-                                    step=10,
-                                    label="Distance",
-                                    interactive=True,
-                                )
-
+                            - The most suitable history guidance scheme will be automatically selected based on your camera movements.    
+                        """)
+                    with gr.Tab("Basic", elem_id="basic-controls-tab"):
+                        with gr.Group():
+                            gr.Markdown("_**Select a direction to move:**_")
+                            with gr.Row(elem_id="basic-controls"):
                                 gr.Button(
-                                    "Generate Next Move", variant="primary"
+                                    "↰-60°\nVeer",
+                                    size="sm",
+                                    min_width=0,
+                                    variant="primary",
                                 ).click(
-                                    fn=navigate_video,
+                                    fn=partial(
+                                        navigate_video,
+                                        x_angle=0,
+                                        y_angle=-60,
+                                        distance=0,
+                                    ),
                                     inputs=[
                                         demo3_current_video,
                                         demo3_current_poses,
-                                        demo3_x_angle,
-                                        demo3_y_angle,
-                                        demo3_distance,
                                     ],
                                     outputs=[
                                         demo3_current_video,
@@ -971,37 +698,143 @@ with gr.Blocks(theme=gr.themes.Base(primary_hue="teal")) as demo:
                                         demo3_generated_gallery,
                                     ],
                                 )
+
+                                gr.Button(
+                                    "↖-30°\nTurn",
+                                    size="sm",
+                                    min_width=0,
+                                    variant="primary",
+                                ).click(
+                                    fn=partial(
+                                        navigate_video,
+                                        x_angle=0,
+                                        y_angle=-30,
+                                        distance=50,
+                                    ),
+                                    inputs=[
+                                        demo3_current_video,
+                                        demo3_current_poses,
+                                    ],
+                                    outputs=[
+                                        demo3_current_video,
+                                        demo3_current_poses,
+                                        demo3_current_view,
+                                        demo3_video,
+                                        demo3_generated_gallery,
+                                    ],
+                                )
+
+                                gr.Button(
+                                    "↑0°\nAhead",
+                                    size="sm",
+                                    min_width=0,
+                                    variant="primary",
+                                ).click(
+                                    fn=partial(
+                                        navigate_video,
+                                        x_angle=0,
+                                        y_angle=0,
+                                        distance=100,
+                                    ),
+                                    inputs=[
+                                        demo3_current_video,
+                                        demo3_current_poses,
+                                    ],
+                                    outputs=[
+                                        demo3_current_video,
+                                        demo3_current_poses,
+                                        demo3_current_view,
+                                        demo3_video,
+                                        demo3_generated_gallery,
+                                    ],
+                                )
+                                gr.Button(
+                                    "↗30°\nTurn",
+                                    size="sm",
+                                    min_width=0,
+                                    variant="primary",
+                                ).click(
+                                    fn=partial(
+                                        navigate_video,
+                                        x_angle=0,
+                                        y_angle=30,
+                                        distance=50,
+                                    ),
+                                    inputs=[
+                                        demo3_current_video,
+                                        demo3_current_poses,
+                                    ],
+                                    outputs=[
+                                        demo3_current_video,
+                                        demo3_current_poses,
+                                        demo3_current_view,
+                                        demo3_video,
+                                        demo3_generated_gallery,
+                                    ],
+                                )
+                                gr.Button(
+                                    "↱\n60° Veer",
+                                    size="sm",
+                                    min_width=0,
+                                    variant="primary",
+                                ).click(
+                                    fn=partial(
+                                        navigate_video,
+                                        x_angle=0,
+                                        y_angle=60,
+                                        distance=0,
+                                    ),
+                                    inputs=[
+                                        demo3_current_video,
+                                        demo3_current_poses,
+                                    ],
+                                    outputs=[
+                                        demo3_current_video,
+                                        demo3_current_poses,
+                                        demo3_current_view,
+                                        demo3_video,
+                                        demo3_generated_gallery,
+                                    ],
+                                )
+                    with gr.Tab("Advanced", elem_id="advanced-controls-tab"):
                         with gr.Group():
-                            gr.Markdown("_You can always undo your last move:_")
-                            gr.Button("Undo Last Move", variant="huggingface").click(
-                                fn=undo_navigation,
-                                inputs=[demo3_current_video, demo3_current_poses],
-                                outputs=[
-                                    demo3_current_video,
-                                    demo3_current_poses,
-                                    demo3_current_view,
-                                    demo3_video,
-                                    demo3_generated_gallery,
-                                ],
-                            )
-                        with gr.Group():
-                            gr.Markdown(
-                                "_At the end, apply temporal super-resolution to obtain a smoother video:_"
-                            )
-                            demo3_interpolation_factor = gr.Slider(
-                                minimum=2,
-                                maximum=10,
-                                value=2,
-                                step=1,
-                                label="By a Factor of",
+                            gr.Markdown("_**Select angles and distance:**_")
+
+                            demo3_y_angle = gr.Slider(
+                                minimum=-90,
+                                maximum=90,
+                                value=0,
+                                step=10,
+                                label="Horizontal Angle",
                                 interactive=True,
                             )
-                            gr.Button("Smooth Out Video", variant="huggingface").click(
-                                fn=smooth_navigation,
+                            demo3_x_angle = gr.Slider(
+                                minimum=-40,
+                                maximum=40,
+                                value=0,
+                                step=10,
+                                label="Vertical Angle",
+                                interactive=True,
+                            )
+                            demo3_distance = gr.Slider(
+                                minimum=0,
+                                maximum=200,
+                                value=100,
+                                step=10,
+                                label="Distance",
+                                interactive=True,
+                            )
+
+                            gr.Button(
+                                "Generate Next Move", variant="primary"
+                            ).click(
+                                fn=navigate_video,
                                 inputs=[
                                     demo3_current_video,
                                     demo3_current_poses,
-                                    demo3_interpolation_factor,
+                                    demo3_x_angle,
+                                    demo3_y_angle,
+                                    demo3_distance,
                                 ],
                                 outputs=[
                                     demo3_current_video,
@@ -1011,7 +844,206 @@ with gr.Blocks(theme=gr.themes.Base(primary_hue="teal")) as demo:
                                     demo3_generated_gallery,
                                 ],
                             )
+                    gr.Markdown("---")
+                    with gr.Group():
+                        gr.Markdown("_You can always undo your last move:_")
+                        gr.Button("Undo Last Move", variant="huggingface").click(
+                            fn=undo_navigation,
+                            inputs=[demo3_current_video, demo3_current_poses],
+                            outputs=[
+                                demo3_current_video,
+                                demo3_current_poses,
+                                demo3_current_view,
+                                demo3_video,
+                                demo3_generated_gallery,
+                            ],
+                        )
+                    with gr.Group():
+                        gr.Markdown(
+                            "_At the end, apply temporal super-resolution to obtain a smoother video:_"
+                        )
+                        demo3_interpolation_factor = gr.Slider(
+                            minimum=2,
+                            maximum=10,
+                            value=2,
+                            step=1,
+                            label="By a Factor of",
+                            interactive=True,
+                        )
+                        gr.Button("Smooth Out Video", variant="huggingface").click(
+                            fn=smooth_navigation,
+                            inputs=[
+                                demo3_current_video,
+                                demo3_current_poses,
+                                demo3_interpolation_factor,
+                            ],
+                            outputs=[
+                                demo3_current_video,
+                                demo3_current_poses,
+                                demo3_current_view,
+                                demo3_video,
+                                demo3_generated_gallery,
+                            ],
+                        )
+        
+    
 
+# Create the Gradio Blocks
+with gr.Blocks(theme=gr.themes.Base(primary_hue="teal")) as demo:
+    gr.HTML(
+        """
+    <style>
+    [data-tab-id="task-1"], [data-tab-id="task-2"], [data-tab-id="task-3"] {
+        font-size: 16px !important;
+        font-weight: bold;
+    }
+    #page-title h1 {
+        color: #0D9488 !important;
+    }
+    .task-title h2 {
+        color: #F59E0C !important;
+    }
+    .header-button-row {
+        gap: 4px !important;
+    }
+    .header-button-row div {
+        width: 131.0px !important;
+    }
+
+    .header-button-column {
+        width: 131.0px !important;
+        gap: 5px !important;
+    }
+    .header-button a {
+        border: 1px solid #e4e4e7;
+    }
+    .header-button .button-icon {
+        margin-right: 8px;
+    }
+    #basic-controls {
+        column-gap: 0px;
+    }
+    #basic-controls-tab {
+        padding: 0px;
+    }
+    #advanced-controls-tab {
+        padding: 0px;
+    }
+    #selected-demo-button {
+        color: #F59E0C;
+        text-decoration: underline;
+    }
+    .demo-button {
+        text-align: left !important;
+        display: block !important;
+    }
+    </style>
+    """
+    )
+
+    demo_idx = gr.State(value=1)
+
+    with gr.Sidebar():
+        gr.Markdown("# Diffusion Forcing Transformer with History Guidance", elem_id="page-title")
+        gr.Markdown(
+            "### Official Interactive Demo for [_History-Guided Video Diffusion_](https://arxiv.org/abs/2502.06764)"
+        )
+        gr.Markdown("---")
+        gr.Markdown("#### Links ↓")
+        with gr.Row(elem_classes=["header-button-row"]):
+            with gr.Column(elem_classes=["header-button-column"], min_width=0):
+                gr.Button(
+                    value="Website",
+                    link="https://boyuan.space/history-guidance",
+                    icon="https://simpleicons.org/icons/googlechrome.svg",
+                    elem_classes=["header-button"],
+                    size="md",
+                    min_width=0,
+                )
+                gr.Button(
+                    value="Paper",
+                    link="https://arxiv.org/abs/2502.06764",
+                    icon="https://simpleicons.org/icons/arxiv.svg",
+                    elem_classes=["header-button"],
+                    size="md",
+                    min_width=0,
+                )
+            with gr.Column(elem_classes=["header-button-column"], min_width=0):
+                gr.Button(
+                    value="Code",
+                    link="https://github.com/kwsong0113/diffusion-forcing-transformer",
+                    icon="https://simpleicons.org/icons/github.svg",
+                    elem_classes=["header-button"],
+                    size="md",
+                    min_width=0,
+                )
+                gr.Button(
+                    value="Weights",
+                    link="https://huggingface.co/kiwhansong/DFoT",
+                    icon="https://simpleicons.org/icons/huggingface.svg",
+                    elem_classes=["header-button"],
+                    size="md",
+                    min_width=0,
+                )
+        gr.Markdown("---")
+        gr.Markdown("#### Choose a Demo ↓")
+        with gr.Group():
+            @gr.render(inputs=[demo_idx])
+            def render_demo_tabs(idx):
+                demo_tab_button1 = gr.Button(
+                    "1: Image → Long Video",
+                    size="md", elem_classes=["demo-button"], **{"elem_id": "selected-demo-button"} if idx == 1 else {}
+                ).click(
+                    fn=lambda: 1,
+                    outputs=demo_idx
+                )
+                demo_tab_button2 = gr.Button(
+                    "2: Any # of Images → Short Video",
+                    size="md", elem_classes=["demo-button"], **{"elem_id": "selected-demo-button"} if idx == 2 else {}
+                ).click(
+                    fn=lambda: 2,
+                    outputs=demo_idx
+                )
+                demo_tab_button3 = gr.Button(
+                    "3: Image → Extremely Long Video",
+                    size="md", elem_classes=["demo-button"],  **{"elem_id": "selected-demo-button"} if idx == 3 else {}
+                ).click(
+                    fn=lambda: 3,
+                    outputs=demo_idx
+                )
+        gr.Markdown("---")
+        gr.Markdown("#### Troubleshooting ↓")
+        with gr.Group():
+            with gr.Accordion("Error or Unexpected Results?", open=False):
+                gr.Markdown("Please try again after refreshing the page and ensure you do not click the same button multiple times.")
+            with gr.Accordion("Too Slow or No GPU Allocation?", open=False):
+                gr.Markdown(
+                    "Consider running the demo locally (click the dots in the top-right corner). Alternatively, you can subscribe to Hugging Face Pro for an increased GPU quota."
+                )
+
+    demo1_stage = gr.State(value="Selection")
+    demo1_selected_index = gr.State(value=None)
+    demo2_stage = gr.State(value="Scene")
+    demo2_selected_scene_index = gr.State(value=None)
+    demo2_selected_image_indices = gr.State(value=[])
+    demo3_stage = gr.State(value="Selection")
+    demo3_selected_index = gr.State(value=None)
+    demo3_current_video = gr.State(value=None)
+    demo3_current_poses = gr.State(value=None)
+
+    @gr.render(inputs=[demo_idx, demo1_stage, demo1_selected_index, demo2_stage, demo2_selected_scene_index, demo2_selected_image_indices, demo3_stage, demo3_selected_index])
+    def render_demo(
+        _demo_idx, _demo1_stage, _demo1_selected_index, _demo2_stage, _demo2_selected_scene_index, _demo2_selected_image_indices, _demo3_stage, _demo3_selected_index
+    ):
+        match _demo_idx:
+            case 1:
+                render_demo1(_demo1_stage, _demo1_selected_index, demo1_stage, demo1_selected_index)
+            case 2:
+                render_demo2(_demo2_stage, _demo2_selected_scene_index, _demo2_selected_image_indices,
+                    demo2_stage, demo2_selected_scene_index, demo2_selected_image_indices)
+            case 3:
+                render_demo3(_demo3_stage, _demo3_selected_index, demo3_stage, demo3_selected_index, demo3_current_video, demo3_current_poses)
+                
 
 if __name__ == "__main__":
     demo.launch()
