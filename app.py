@@ -920,6 +920,9 @@ with gr.Blocks(theme=gr.themes.Base(primary_hue="teal")) as demo:
     .header-button .button-icon {
         margin-right: 8px;
     }
+    .demo-button-column .gap {
+        gap: 5px !important;
+    }
     #basic-controls {
         column-gap: 0px;
     }
@@ -987,7 +990,7 @@ with gr.Blocks(theme=gr.themes.Base(primary_hue="teal")) as demo:
                 )
         gr.Markdown("---")
         gr.Markdown("#### Choose a Demo ↓")
-        with gr.Group():
+        with gr.Column(elem_classes=["demo-button-column"]):
             @gr.render(inputs=[demo_idx])
             def render_demo_tabs(idx):
                 demo_tab_button1 = gr.Button(
