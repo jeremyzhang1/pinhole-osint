@@ -1,3 +1,3 @@
 # gradio
 # spaces
-git+https://github.com/kwsong0113/diffusion-forcing-transformer.git@9c14b3d#egg=dfot
+git+https://github.com/kwsong0113/diffusion-forcing-transformer.git@2afc548#egg=dfot
