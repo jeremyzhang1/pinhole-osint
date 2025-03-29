@@ -16,18 +16,18 @@ from export import export_to_video, export_to_gif, export_images_to_gif
 from camera_pose import extend_poses, CameraPose
 from scipy.spatial.transform import Rotation, Slerp
 
-DATASET_URL = "https://huggingface.co/kiwhansong/DFoT/resolve/main/datasets/RealEstate10K_Tiny.tar.gz"
+# DATASET_URL = "https://huggingface.co/kiwhansong/DFoT/resolve/main/datasets/RealEstate10K_Tiny.tar.gz"
 DATASET_DIR = Path("data/real-estate-10k-tiny")
 LONG_LENGTH = 10  # seconds
 NAVIGATION_FPS = 3
 
-if not DATASET_DIR.exists():
-    DATASET_DIR.mkdir(parents=True)
-    download_and_extract_archive(
-        DATASET_URL,
-        DATASET_DIR.parent,
-        remove_finished=True,
-    )
+# if not DATASET_DIR.exists():
+#     DATASET_DIR.mkdir(parents=True)
+#     download_and_extract_archive(
+#         DATASET_URL,
+#         DATASET_DIR.parent,
+#         remove_finished=True,
+#     )
 
 
 metadata = torch.load(DATASET_DIR / "metadata" / "test.pt", weights_only=False)
@@ -606,8 +606,8 @@ def render_demo3(
 ):
     gr.Markdown(
         """
-        ## Demo 3: Single Image → Extremely Long Video _(Navigate with Your Camera Movements!)_
-        > #### _History Guidance significantly improves quality and temporal consistency, enabling stable rollouts for extremely long videos._
+        ##  → Pinhole: Diffusion Transfomer for predicting trajectory with three dimentional memory!)_
+        > #### _Memory Guidance significantly improves quality and temporal consistency, enabling stable rollouts for extremely long videos._
     """,
     elem_classes=["task-title"]
     )
@@ -1049,4 +1049,4 @@ with gr.Blocks(theme=gr.themes.Base(primary_hue="teal")) as demo:
                 
 
 if __name__ == "__main__":
-    demo.launch()
+    demo.launch(share=True)
