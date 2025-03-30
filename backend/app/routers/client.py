@@ -3,7 +3,7 @@ import shodan
 
 router = APIRouter()
 
-SHODAN_API_KEY = "9SLWy1ffaN61DPqiToXsoQnkOtGxfdMc"
+SHODAN_API_KEY = ""
 
 shodan_api = shodan.Shodan(SHODAN_API_KEY)
 
