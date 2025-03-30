@@ -16,32 +16,28 @@ import '../styles/LandingPage.css';
 export const baseUrl = "http://localhost:8000"
 
 function LandingPage() {
-    const [originalPrompt, setOriginalPrompt] = useState("")
-    const [originalOutput, setOriginalOutput] = useState("")
+    const [ipAddress, setIPAddress] = useState("")
+    const [ipAddressResponse, setIPAddressResponse] = useState("")
 
-    const [loadingOne, setLoadingOne] = useState(false)
-    const [loadingTwo, setLoadingTwo] = useState(false)
+    const [loading, setLoading] = useState(false)
 
     function handleSubmit(e) {
         e.preventDefault()
-        setLoadingOne(true)
-        setLoadingTwo(true)
-        setOriginalOutput("")
+        setLoading(true)
+
+        fetch("https://api.shodan.io/shodan/host/45.144.124.59")
+            .then(results => results.json())
+            .then(data => {
+                console.log(data)
+            })
 
         fetch(baseUrl + '/client/get-original-response?' + new URLSearchParams({
-            request: originalPrompt
+            request_ip: ipAddress
         }))
             .then(results => results.json())
             .then(data => {
-                setOriginalOutput(data)
-                setLoadingOne(false)
-            })
-        fetch(baseUrl + '/client/get-jailbroken-response?' + new URLSearchParams({
-            request: originalPrompt
-        }))
-            .then(results => results.json())
-            .then(data => {
-                setLoadingTwo(false)
+                setIPAddressResponse(data)
+                setLoading(false)
             })
     }
 
@@ -76,23 +72,21 @@ function LandingPage() {
                 <Form>
                     <Form.Group className="mb-3" controlId="exampleForm.ControlTextarea1">
                         <Form.Label>IP Address:</Form.Label>
-                        <Form.Control as="textarea" rows={3} onChange={(e) => setOriginalPrompt(e.target.value)} />
+                        <Form.Control as="textarea" rows={3} onChange={(e) => setIPAddress(e.target.value)} />
                     </Form.Group>
                 </Form>
-                <Button onClick={(e) => handleSubmit(e)} disabled={loadingOne || loadingTwo} variant='danger'>Submit</Button>
+                <Button onClick={(e) => handleSubmit(e)} disabled={loading} variant='danger'>Submit</Button>
                 <h1 className='h1-action'>OSINT Search Results:</h1>
                 <br />
                 <br />
                 <Row>
                     <Col md={6}>
-                        <h3>Placeholder</h3>
-                        <Form.Control as="textarea" rows={5} value={originalPrompt} />
-                        <br />
-                        <h3>Placeholder</h3>
-                        <Form.Control as="textarea" rows={10} value={originalOutput} />
+                        <h3>IP Information</h3>
+                        <p>{ipAddressResponse}</p>
                     </Col>
                     <Col md={6}>
-                        <h3>Placeholder</h3>
+                        <h3>Camera Image:</h3>
+                        {!loading ? <></> : <img src={`https://www.shodan.io/host/${ipAddress}/image?p=7777`} height="60%" />}
                     </Col>
                 </Row>
             </Container>
